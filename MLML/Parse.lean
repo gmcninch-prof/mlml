@@ -1,5 +1,5 @@
 --
--- Time-stamp: <2026-04-22 Wed 12:50 EDT - george@sortilege>
+-- Time-stamp: <2026-04-23 Thu 15:44 EDT - george@sortilege>
 --
 import MLML.Tokens
 import MLML.Expression
@@ -45,6 +45,7 @@ instance : MonadExcept String Parser where
     | ok => ok
 
 instance : Alternative Parser where
+
   failure := fun _ => Except.error "failure"
   orElse p q := fun toks =>
     match p toks with
