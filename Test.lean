@@ -2,18 +2,34 @@ import Init.System.IO
 import MLML
 import MLML.Codec
 
+inductive Pet 
+  | Cat 
+  | Dog
+  | Hamster
+deriving Repr
+
 structure MyData where
   name : String
   age  : Nat
+  pet : Pet
   children : List String
 deriving Repr
   
 def s := "
 MyData { 
-  name = \"George\"
-  age = 58
-  children = [ \"Gabe\" \"Nina\" ]
+  name = \"Alice\"
+  children = [ \"Bob\" \"Cathy\" ]  
+  pet = Cat
+  age = 38  
 }"
+
+open Codec in
+instance : Codec.Decode Pet where
+  decode
+    | .Id "Cat" => .ok Pet.Cat
+    | .Id "Dog" => .ok Pet.Dog
+    | e => .error s!"Expected Pet, received {repr e}"
+
   
 open Codec in  
 instance : Codec.Decode MyData where
@@ -21,13 +37,29 @@ instance : Codec.Decode MyData where
     | .Constructor "MyData" fs => do
       let name     ← decodeField "name" fs
       let age      ← decodeField "age" fs
+      let pet      ← decodeField "pet" fs
       let children ← decodeField "children" fs
-      pure <| { name, age, children }
+      pure <| { name, age, children , pet }
     | e => .error s!"expected MyData, got {repr e}"
+  
+
+def testdata := [ "data/test.mlml", "data/test2.mlml" ] 
+    
+    
+def test (fn : String) : IO Unit := do 
+  let (s : String)  ← IO.FS.readFile fn
+    match expressionFromString s with
+    | .ok expr => IO.println expr
+    | .error s => IO.println s
     
 def main : IO Unit := do
   match (@parseAndDecode MyData _ s) with
   | .ok md => IO.println <| reprStr md
   | .error e => IO.println e
 
-#eval main
+  testdata.forM test
+
+
+--#eval main
+
+-- #guard (tokenize "id = \"foo\"") == [ ... ]

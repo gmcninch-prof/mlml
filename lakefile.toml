@@ -1,10 +1,10 @@
 name = "MLML"
 version = "0.1.0"
-defaultTargets = ["mlml"]
+#defaultTargets = ["mlml"]
 
 [[lean_lib]]
 name = "MLML"
 
 [[lean_exe]]
-name = "mlml"
-root = "Main"
+name = "test"
+root = "Test"
