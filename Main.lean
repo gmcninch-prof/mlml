@@ -33,8 +33,12 @@ def printExpression (file : String) : IO Unit := do
 
 def testdata: String := "data/test.mlml" 
 
-#eval getTokens testdata
+def main : IO Unit := do
+  let expr ← getExpression testdata
+  IO.println expr
 
-#eval getExpression testdata
+-- #eval getTokens testdata
 
-#eval printExpression testdata
+-- #eval getExpression testdata
+
+-- #eval printExpression testdata
