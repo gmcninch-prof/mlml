@@ -1,0 +1,158 @@
+
+* adding let statements
+
+I was imagining option 1 -- we discussed maintaining an Environment List. 
+
+And in fact, you suggested do an initial pass before decoding. Which
+suggests to me that there should be a Let-less form of Expressions
+(that would be arrived at after the initial pass. Or maybe after
+multiple passes?)
+
+Yes, exactly — that two-type design is quite clean. You'd have something like:
+
+inductive RawExpression where
+  | EList : List RawExpression -> RawExpression
+  | StrLit : String -> RawExpression
+  | NatLit : Nat -> RawExpression
+  | BoolLit : Bool -> RawExpression
+  | Id : String -> RawExpression
+  | Constructor : String -> List RawField → RawExpression
+  | Let : String -> RawExpression -> RawExpression  -- only here!
+
+inductive Expression where
+  | EList : List Expression -> Expression
+  | StrLit : String -> Expression
+  | NatLit : Nat -> Expression
+  | BoolLit : Bool -> Expression
+  | Id : String -> Expression          -- or maybe gone too?
+  | Constructor : String -> List Field → Expression
+
+The parser produces RawExpression. Then a resolution pass walks the
+raw tree, maintaining an Environment (something like
+
+List (String ×Expression)
+
+),
+substitutes Id references, and produces
+Expression. After that pass, Let simply can't appear — it's not even
+in the type.
+
+The interesting question is whether Id survives into Expression. If
+your resolution pass is total (all Ids must be defined by a Let
+binding), then Expression has no Id either and is fully concrete. If
+you allow unresolved names to pass through (perhaps for a later
+stage), then Id stays. For a config language where everything should
+be known at parse time, eliminating Id entirely from Expression seems
+right — an unresolved Id would be a resolution error, not a valid
+expression.  So the pipeline would be:
+
+
+text → (parser) → RawExpression → (resolution pass) → Expression
+
+
+And the types enforce that the resolved form is genuinely let-free and
+id-free, with no runtime checks needed downstream.
+
+
+* adding file imports
+
+#+begin_quote
+> The other thing I was toying with was allowing "file imports". 
+
+> But that seems to then mean I have to make everything work inside
+> the IO monad. Which feels annoying?
+#+end_quote
+
+Yes, imports push you into IO (or at minimum IO-at-the-boundary),
+because you need to read files. But you can contain the damage by
+doing all the IO work up front in a single pass, before any of the
+pure processing begins.  The idea: add an Import constructor to
+RawExpression, then do a pre-pass that is in IO and whose only job is
+to recursively load imported files and splice their contents in. The
+output of that pre-pass is an import-free RawExpression. From that
+point on everything is pure.  So the pipeline becomes:
+
+text → (parser) → RawExpression  →  (IO import pass)
+→  RawExpression  →  (pure resolution)
+→  Expression (may have Import)   (import-free)
+
+		  
+You could even reflect this in types, the same way you handled Let:
+
+inductive RawExpression where   -- after parsing, may have imports and lets
+  | ...
+  | Import : String -> RawExpression   -- filename
+  | Let : String -> RawExpression -> RawExpression
+
+inductive CookedExpression where  -- after IO pass, no imports
+  | ...
+  | Let : String -> CookedExpression -> CookedExpression  -- lets still present
+
+inductive Expression where        -- after resolution pass, fully concrete
+  | ...
+
+
+Though three stages might be overkill for your use case. The simpler
+version is just: the IO pre-pass flattens imports and returns a plain
+RawExpression with no Import nodes, and you don't introduce a third
+type. The type doesn't enforce import-freedom at that stage, but the
+logic does, and it keeps the code simpler.  The key point is that IO
+stays confined to that one early pass — the rest of your processing
+doesn't need to know imports ever existed.
+
+
+  #+begin_quote
+  Yeah, I think I can live with two types as you describe. 
+
+  But this does confirm that it'll be fine to *first* do the let
+  forms. The imports (though they'll appear earlier in the pipeline)
+  shouldn't cause any need to do complicated things to the later code.
+  #+end_quote
+
+Exactly right. The imports are "earlier in the pipeline" in execution
+order, but they're independent of the let-resolution machinery. The
+let resolution just operates on whatever RawExpression tree it
+receives — it doesn't care whether that tree came from a single file
+or was assembled from several imported files by the IO pass.  So the
+work naturally separates:
+
+First: get Let bindings working end-to-end (parser → RawExpression →
+resolution → Expression), all pure, testable without any IO.
+
+Later: bolt on the IO import pass at the front, producing a
+RawExpression that feeds into the already-working pure pipeline
+unchanged.
+
+Step 2 is essentially an independent feature that composes cleanly
+with step 1. Good sequencing.
+
+#+begin_quote
+I guess I should have some reasonably unique easily matchable construction like
+
+#import "filename.mlml"
+
+or so, so that it is easy to unambiguously parse imports well, I guess
+the word import by itself is probably safe ...)
+#+end_quote
+
+For a config/data language like yours, `import "filename.mlml"` (no
+`#`) is probably fine — the word `import` at the start of a line is
+unambiguous since your other expression forms are either literals,
+`let x = ...`, or `Constructor { ... }` shapes. Nothing else starts
+with a bare keyword like that.
+
+The `#` sigil is useful in languages where keywords might collide with
+identifiers (like C preprocessor directives, or Lean's `#check`), but
+you don't have that problem — `import` isn't a valid constructor name
+or field name in your grammar.
+
+So `import "filename.mlml"` reads cleanly and parses
+unambiguously. The only mild argument for the `#` would be visual
+salience — imports stand out at a glance — but that's purely
+aesthetic.
+
+
+For emacs mode:
+
+(font-lock-add-keywords 'mlml-mode
+  '(("\\bimport\\b" . font-lock-keyword-face)))
