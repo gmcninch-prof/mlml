@@ -1,5 +1,5 @@
 --
--- Time-stamp: <2026-04-23 Thu 15:44 EDT - george@sortilege>
+-- Time-stamp: <2026-04-27 Mon 16:18 EDT - george@sortilege>
 --
 import MLML.Tokens
 import MLML.Expression
@@ -98,7 +98,7 @@ def parseField (fuel : Nat): Parser Field := fun toks =>
   | n+1 => do
     let (id, toks') ← parseString toks
     let (_, toks'') ← parseSymbol .Eq toks'
-    let (expr, toks''') ← parseExpression' n toks''
+    let (expr, toks''') ← parseRawExpression' n toks''
     pure (Field.mk id expr, toks''')
   
 def parseFields (fuel : Nat) (acc : List Field) 
@@ -114,49 +114,49 @@ def parseFields (fuel : Nat) (acc : List Field)
       let (f,toks') ← parseField n toks
       parseFields n (f :: acc) toks' 
     
-def parseExpressionList' (fuel : Nat) (acc : List Expression) 
-    : Parser (List Expression) := fun toks => 
+def parseRawExpressionList' (fuel : Nat) (acc : List RawExpression) 
+    : Parser (List RawExpression) := fun toks => 
   match fuel with 
   | 0 => .error noFuel
   | n+1 => 
     match toks with
       | [] => .ok (acc.reverse, [])
       | Token.rbracket :: rest => Except.ok (acc.reverse, rest)
-      | Token.comma :: rest => parseExpressionList' n acc rest
+      | Token.comma :: rest => parseRawExpressionList' n acc rest
       | _ => do
-        let (expr, toks') ← parseExpression' n toks
-        parseExpressionList' n (expr :: acc) toks'
+        let (expr, toks') ← parseRawExpression' n toks
+        parseRawExpressionList' n (expr :: acc) toks'
 
-def parseExpressionList (acc : List Expression) :
-    Parser (List Expression) := fun toks =>
-  parseExpressionList' toks.length acc toks
+def parseRawExpressionList (acc : List RawExpression) :
+    Parser (List RawExpression) := fun toks =>
+  parseRawExpressionList' toks.length acc toks
 
-def parseExpression' (fuel : Nat) : Parser Expression := fun toks =>
+def parseRawExpression' (fuel : Nat) : Parser RawExpression := fun toks =>
   match fuel with
   | 0 => .error noFuel
   | n+1 => 
     match toks with
     | [] => Except.error "nothing to parse"
     | tok :: rest  => match tok with
-      | Token.strLit s => Except.ok (Expression.StrLit s, rest)
-      | Token.natLit n => Except.ok (Expression.NatLit n, rest)
+      | Token.strLit s => Except.ok (RawExpression.StrLit s, rest)
+      | Token.natLit n => Except.ok (RawExpression.NatLit n, rest)
       | Token.lbracket => do
-        let (exprs,toks') ← parseExpressionList' n [] rest
-        pure (Expression.EList exprs,toks')
+        let (exprs,toks') ← parseRawExpressionList' n [] rest
+        pure (RawExpression.EList exprs,toks')
       | Token.ident id => 
         match rest with
-        | [] => Except.ok (Expression.Id id, [])
+        | [] => Except.ok (RawExpression.Id id, [])
         | tok' :: rest' => 
           match tok' with
           | Token.lbrace => do
             let (fields,toks'') ← parseFields n [] rest'
-            pure (Expression.Constructor id fields,toks'')
-          | _ => Except.ok (Expression.Id id, rest)
+            pure (RawExpression.Constructor id fields,toks'')
+          | _ => Except.ok (RawExpression.Id id, rest)
       | _ => 
         Except.error "mal-formed"
 
-def parseExpression : Parser Expression := fun toks =>
-  parseExpression' toks.length toks
+def parseRawExpression : Parser RawExpression := fun toks =>
+  parseRawExpression' toks.length toks
 
 
 end

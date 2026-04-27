@@ -1,32 +1,54 @@
 --
--- Time-stamp: <2026-04-21 Tue 17:13 EDT - george@valhalla>
+-- Time-stamp: <2026-04-27 Mon 17:29 EDT - george@sortilege>
 --
 
 
 --------------------------------------------------------------------------------
-mutual
-  inductive Field where 
-    | mk : String → Expression → Field
-  
-  inductive Expression where
-    | EList : List Expression -> Expression
-    | StrLit : String -> Expression
-    | NatLit : Nat -> Expression
-    | BoolLit : Bool -> Expression
-    | Id : String -> Expression
-    | Constructor : String -> List Field → Expression
-  deriving Repr
 
-end
+inductive Field (E : Type) where
+  | mk : String → E → Field E
+deriving Repr
+
+  -- inductive Field where 
+  --   | mk : String → Expression → Field
+
+inductive RawExpression where
+  | EList : List RawExpression -> RawExpression
+  | StrLit : String -> RawExpression
+  | NatLit : Nat -> RawExpression
+  | BoolLit : Bool -> RawExpression
+  | Id : String -> RawExpression
+  | Constructor : String -> List (Field RawExpression) → RawExpression
+  | Let : String → RawExpression → RawExpression
+deriving Repr  
+  
+inductive Expression where
+  | EList : List Expression -> Expression
+  | StrLit : String -> Expression
+  | NatLit : Nat -> Expression
+  | BoolLit : Bool -> Expression
+  | Id : String -> Expression
+  | Constructor : String -> List (Field Expression) → Expression
+deriving Repr
+
 --------------------------------------------------------------------------------
 
-def Field.name : Field → String
+def Field.name : Field E → String
 | .mk name _ => name
 
 --------------------------------------------------------------------------------
 
+abbrev Environment := List (String × Expression)
+
+def lookupInEnvironment (id : String) (env :Environment) : Except String Expression := 
+  match List.lookup id env with
+  | .some expr => .ok expr
+  | .none => .error s!"Identifier {id} not found"
+  
+--------------------------------------------------------------------------------
+
 mutual
-  def Field.size : Field → Nat
+  def Field.size : Field Expression → Nat
     | .mk _ expr => expr.size + 1
   def Expression.size : Expression → Nat
     | .EList xs => expressionListSize xs + 1
@@ -35,7 +57,7 @@ mutual
   private def expressionListSize : List Expression → Nat
     | [] => 0
     | x :: xs => x.size + expressionListSize xs
-  private def fieldListSize : List Field → Nat
+  private def fieldListSize : List (Field Expression) → Nat
     | [] => 0
     | x :: xs => x.size + fieldListSize xs
 end
@@ -54,7 +76,7 @@ theorem Expression.size_lt_list (a : Expression) (xs : List Expression) (h : a �
       simp [expressionListSize, Expression.size] at *
       omega 
 
-theorem Expression.size_lt_constructor (a : Field) (id : String) (fs : List Field) (h : a ∈ fs) :
+theorem Expression.size_lt_constructor (a : Field Expression) (id : String) (fs : List (Field Expression)) (h : a ∈ fs) :
     a.size < (Expression.Constructor id fs).size := by 
   induction fs with
   | nil => exact absurd h (by simp)
@@ -69,7 +91,7 @@ theorem Expression.size_lt_constructor (a : Field) (id : String) (fs : List Fiel
       omega
 
 mutual 
-  def Field.render (n : Nat) : Field -> String := fun field =>
+  def Field.render (n : Nat) : Field Expression -> String := fun field =>
     let indent := String.ofList (List.replicate (2 * n) ' ')
     match field with
     | .mk id val => indent ++ id ++ " = " ++ Expression.render n val
@@ -104,11 +126,11 @@ end
 instance : ToString Expression where
   toString := Expression.render 0
 
-instance : ToString Field where
+instance : ToString (Field Expression) where
   toString := Field.render 0
 
 
-def lookupField (name : String) (fields : List Field) : Except String Expression :=
+def lookupField (name : String) (fields : List (Field Expression)) : Except String Expression :=
   match fields.find? (fun f => f.name == name) with
   | some (.mk _ expr) => .ok expr
   | none => .error s!"missing field: {name}"
