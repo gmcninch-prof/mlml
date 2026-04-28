@@ -16,14 +16,16 @@ structure MyData where
 deriving Repr
   
 def s := "
-let alice = \"Alice\"
-
 MyData { 
   name = alice
-  children = [ \"Bob\" \"Cathy\" ]  
+  children = children
   pet = Cat
   age = 38  
-}"
+}
+
+let alice = \"Alice\"
+let children = [ \"Bob\" \"Cathy\" ]  
+"
 
 open Codec in
 instance : Codec.Decode Pet where
