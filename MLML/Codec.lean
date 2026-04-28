@@ -1,5 +1,5 @@
 --
--- Time-stamp: <2026-04-22 Wed 12:49 EDT - george@sortilege>
+-- Time-stamp: <2026-04-28 Tue 10:20 EDT - george@valhalla>
 --
 
 import MLML.Expression
@@ -17,7 +17,8 @@ instance : Alternative (Except String) where
     | Except.ok x  => Except.ok x
     | Except.error _ => b ()
 
-def decodeField [Decode α] (name : String) (fs : List Field) : Except String α :=
+def decodeField [Decode α] (name : String) (fs : List (Field Expression)) 
+    : Except String α :=
   lookupField name fs >>= Decode.decode
 
 instance [Decode α] : Decode (List α) where
@@ -28,8 +29,7 @@ instance [Decode α] : Decode (List α) where
 instance : Decode String where
   decode
     | .StrLit s => .ok s
-    | .Id s => .ok s
-    | e => .error s!"expected raw string or id, got {repr e}"
+    | e => .error s!"expected raw string, got {repr e}"
     
 instance : Decode Nat where
   decode

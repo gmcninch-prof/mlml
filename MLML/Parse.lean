@@ -1,5 +1,5 @@
 --
--- Time-stamp: <2026-04-27 Mon 16:18 EDT - george@sortilege>
+-- Time-stamp: <2026-04-28 Tue 10:01 EDT - george@valhalla>
 --
 import MLML.Tokens
 import MLML.Expression
@@ -30,6 +30,11 @@ def Parser (α : Type) :=
   (toks : List Token) → Except String (α × List Token)
 
 def noFuel : String := "parser error: input too deeply nested" 
+
+def isLower (s : String) : Bool :=
+  match s.toList with
+  | c :: _ => c.isLower
+  | [] => false
 
 instance : Monad Parser where
   pure a := fun toks => Except.ok (a, toks)
@@ -92,17 +97,17 @@ def parseBool : Parser Bool :=
 --------------------------------------------------------------------------------
 mutual
   
-def parseField (fuel : Nat): Parser Field := fun toks =>
+def parseField (fuel : Nat): Parser (Field RawExpression) := fun toks =>
   match fuel with
   | 0 => .error noFuel
   | n+1 => do
     let (id, toks') ← parseString toks
     let (_, toks'') ← parseSymbol .Eq toks'
-    let (expr, toks''') ← parseRawExpression' n toks''
+    let (expr, toks''') ← parseRawExpression n toks''
     pure (Field.mk id expr, toks''')
   
-def parseFields (fuel : Nat) (acc : List Field) 
-    : Parser (List Field) := fun toks =>
+def parseFields (fuel : Nat) (acc : List (Field RawExpression)) 
+    : Parser (List (Field RawExpression)) := fun toks =>
   match fuel with
   | 0 => .error noFuel
   | n+1 =>
@@ -114,7 +119,7 @@ def parseFields (fuel : Nat) (acc : List Field)
       let (f,toks') ← parseField n toks
       parseFields n (f :: acc) toks' 
     
-def parseRawExpressionList' (fuel : Nat) (acc : List RawExpression) 
+def parseRawExpressionList (fuel : Nat) (acc : List RawExpression) 
     : Parser (List RawExpression) := fun toks => 
   match fuel with 
   | 0 => .error noFuel
@@ -122,16 +127,12 @@ def parseRawExpressionList' (fuel : Nat) (acc : List RawExpression)
     match toks with
       | [] => .ok (acc.reverse, [])
       | Token.rbracket :: rest => Except.ok (acc.reverse, rest)
-      | Token.comma :: rest => parseRawExpressionList' n acc rest
+      | Token.comma :: rest => parseRawExpressionList n acc rest
       | _ => do
-        let (expr, toks') ← parseRawExpression' n toks
-        parseRawExpressionList' n (expr :: acc) toks'
+        let (expr, toks') ← parseRawExpression n toks
+        parseRawExpressionList n (expr :: acc) toks'
 
-def parseRawExpressionList (acc : List RawExpression) :
-    Parser (List RawExpression) := fun toks =>
-  parseRawExpressionList' toks.length acc toks
-
-def parseRawExpression' (fuel : Nat) : Parser RawExpression := fun toks =>
+def parseRawExpression  (fuel : Nat) : Parser RawExpression := fun toks =>
   match fuel with
   | 0 => .error noFuel
   | n+1 => 
@@ -141,26 +142,48 @@ def parseRawExpression' (fuel : Nat) : Parser RawExpression := fun toks =>
       | Token.strLit s => Except.ok (RawExpression.StrLit s, rest)
       | Token.natLit n => Except.ok (RawExpression.NatLit n, rest)
       | Token.lbracket => do
-        let (exprs,toks') ← parseRawExpressionList' n [] rest
+        let (exprs,toks') ← parseRawExpressionList n [] rest
         pure (RawExpression.EList exprs,toks')
-      | Token.ident id => 
-        match rest with
-        | [] => Except.ok (RawExpression.Id id, [])
-        | tok' :: rest' => 
-          match tok' with
-          | Token.lbrace => do
-            let (fields,toks'') ← parseFields n [] rest'
-            pure (RawExpression.Constructor id fields,toks'')
-          | _ => Except.ok (RawExpression.Id id, rest)
-      | _ => 
-        Except.error "mal-formed"
-
-def parseRawExpression : Parser RawExpression := fun toks =>
-  parseRawExpression' toks.length toks
-
+      | Token.ident ident => 
+        
+        -- uncapitilized Token.ident → RawExpression.Id
+        if isLower ident then                           
+          Except.ok (RawExpression.Id ident, rest)
+        
+        -- capitalized Token.ident → RawExpression.Constructor          
+        else                                         
+          match rest with
+          | [] => Except.ok (RawExpression.Constructor ident [], [])
+          | tok' :: rest' => 
+            match tok' with
+            | Token.lbrace => do
+              let (fields,rest'') ← parseFields n [] rest'
+              pure (RawExpression.Constructor ident fields,rest'')
+            | _ => Except.ok (RawExpression.Constructor ident [], rest)
+      | _ => Except.error "mal-formed"
 
 end
 --------------------------------------------------------------------------------
 
 
+def parseTopLevel : Parser TopLevel := fun toks =>
+  match toks with 
+    | [] => Except.error "nothing to parse"
+    | .ident "let" :: rest => do
+      let (.mk id rexpr,rest')  ← parseField toks.length rest            
+      .ok (TopLevel.Let id rexpr,rest')
+    | _ => do
+      let (expr,rest') ← parseRawExpression toks.length toks
+      .ok (TopLevel.Expr expr,rest')
  
+ def parseTopLevelList : Parser (List TopLevel) := fun toks =>
+  go toks.length toks
+where
+  go : Nat → Parser (List TopLevel)
+  | 0, _ => .error noFuel
+  | _, [] => .ok ([], [])
+  | n+1, toks => do
+    let (tl, rest) ← parseTopLevel toks
+    let (tls, rest') ← go n rest
+    .ok (tl :: tls, rest')
+

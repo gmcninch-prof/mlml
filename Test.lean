@@ -16,8 +16,10 @@ structure MyData where
 deriving Repr
   
 def s := "
+let alice = \"Alice\"
+
 MyData { 
-  name = \"Alice\"
+  name = alice
   children = [ \"Bob\" \"Cathy\" ]  
   pet = Cat
   age = 38  
@@ -26,11 +28,10 @@ MyData {
 open Codec in
 instance : Codec.Decode Pet where
   decode
-    | .Id "Cat" => .ok Pet.Cat
-    | .Id "Dog" => .ok Pet.Dog
+    | .Constructor "Cat" [] => .ok Pet.Cat
+    | .Constructor "Dog" [] => .ok Pet.Dog
     | e => .error s!"Expected Pet, received {repr e}"
 
-  
 open Codec in  
 instance : Codec.Decode MyData where
   decode
@@ -43,7 +44,7 @@ instance : Codec.Decode MyData where
     | e => .error s!"expected MyData, got {repr e}"
   
 
-def testdata := [ "data/test.mlml", "data/test2.mlml" ] 
+def testdata := [ "data/test1.mlml", "data/test2.mlml" ] 
     
     
 def test (fn : String) : IO Unit := do 
@@ -60,6 +61,6 @@ def main : IO Unit := do
   testdata.forM test
 
 
---#eval main
+#eval main
 
 -- #guard (tokenize "id = \"foo\"") == [ ... ]
