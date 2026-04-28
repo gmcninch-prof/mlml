@@ -15,7 +15,7 @@ structure MyData where
   children : List String
 deriving Repr
   
-def s := "
+def s1 := "
 MyData { 
   name = alice
   children = children
@@ -25,6 +25,32 @@ MyData {
 
 let alice = \"Alice\"
 let children = [ \"Bob\" \"Cathy\" ]  
+"
+
+
+def s2 := "
+let c = Test {
+    a = 1
+    b = 2
+    c = \"3\"
+  }
+
+Test {
+  a = 1
+  b = 2
+  c = c
+}"
+
+def s3 := "
+Test {
+  a = 1
+  b = 2
+  c = Test 
+    a = 1
+    b = 2
+    c = \"3\"
+  }
+}
 "
 
 open Codec in
@@ -44,25 +70,20 @@ instance : Codec.Decode MyData where
       let children ← decodeField "children" fs
       pure <| { name, age, children , pet }
     | e => .error s!"expected MyData, got {repr e}"
-  
-
-def testdata := [ "data/test1.mlml", "data/test2.mlml" ] 
     
-    
-def test (fn : String) : IO Unit := do 
-  let (s : String)  ← IO.FS.readFile fn
+def test (s : String) : IO Unit := do 
     match expressionFromString s with
     | .ok expr => IO.println expr
     | .error s => IO.println s
     
 def main : IO Unit := do
-  match (@parseAndDecode MyData _ s) with
+  match (@parseAndDecode MyData _ s1) with
   | .ok md => IO.println <| reprStr md
   | .error e => IO.println e
 
-  testdata.forM test
+  [ s2, s3 ].forM test
 
 
-#eval main
+--#eval main
 
 -- #guard (tokenize "id = \"foo\"") == [ ... ]
