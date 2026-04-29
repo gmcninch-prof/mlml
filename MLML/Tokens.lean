@@ -1,5 +1,5 @@
 -- 
--- Time-stamp: <2026-04-20 Mon 16:05 EDT - george@valhalla>
+-- Time-stamp: <2026-04-29 Wed 16:14 EDT - george@sortilege>
 --
 
 inductive Token
@@ -15,6 +15,7 @@ inductive Token
 deriving Repr, BEq
 
 def Char.isIdentChar (c : Char) := c.isAlpha || c == '_'
+def Char.isIdentContinue (c : Char) := c.isIdentChar || c.isDigit
 
 inductive CharAccum
   | none
@@ -75,7 +76,7 @@ where
       | c =>
         Accum.mk (CharAccum.string (c :: cs)) a.tokens  -- continue getting string literal
     | CharAccum.ident cs =>
-      if c.isIdentChar then
+      if c.isIdentContinue then
         Accum.mk (CharAccum.ident (c :: cs)) a.tokens -- continue getting identifier
       else
         processChar c <| flushIdent cs a.tokens
