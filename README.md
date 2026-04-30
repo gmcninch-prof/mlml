@@ -20,13 +20,15 @@ An `mlml` file contains a single `Expression`, which can be:
 - **String literals**: `"hello"`
 - **Natural number literals**: `42`
 - **Boolean literals**: `true`, `false`
-- **Identifiers**: `Mon`, `Fall`, `AllDay`
+- **Identifiers** (for let-bindings):  `classRoom`
 - **Constructors** (named records): `Semester { ay = 2025 term = Fall }`
+    (possibly with no arguments): `Mon`, `Fall`, `AllDay`
 - **Lists**: `[ "item1" "item2" "item3" ]`
 
 ### Example
 
 ```
+let classRoom = "JCC 140"
 Course {
   title = "Math 136"
   semester = Semester { ay = 2025 term = Spring }
@@ -37,7 +39,7 @@ Course {
         DowTufts {
           dow = Mon
           time = TimeRange { start = "10:30" stop = "11:45" }
-          location = "JCC 140"
+          location = classRoom
           }
       ]
       topics = [ "Introduction" "Limits" ]
