@@ -1,5 +1,5 @@
 -- 
--- Time-stamp: <2026-04-29 Wed 16:14 EDT - george@sortilege>
+-- Time-stamp: <2026-04-30 Thu 13:25 EDT - george@valhalla>
 --
 
 inductive Token
@@ -15,7 +15,8 @@ inductive Token
 deriving Repr, BEq
 
 def Char.isIdentChar (c : Char) := c.isAlpha || c == '_'
-def Char.isIdentContinue (c : Char) := c.isIdentChar || c.isDigit
+def Char.isIdentContinue (c : Char) :=
+  c.isIdentChar || c.isDigit || ":-._+".contains c 
 
 inductive CharAccum
   | none
