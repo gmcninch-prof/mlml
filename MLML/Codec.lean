@@ -1,5 +1,5 @@
 --
--- Time-stamp: <2026-04-28 Tue 10:20 EDT - george@valhalla>
+-- Time-stamp: <2026-05-01 Fri 10:19 EDT - george@sortilege>
 --
 
 import MLML.Expression
@@ -42,5 +42,33 @@ instance : Decode Bool where
     | e => .error s!"expected raw Nat, got {repr e}"
 
 
+-- Expression-level Option decoder 
+instance [Codec.Decode α] : Codec.Decode (Option α) where
+  decode
+    | .Constructor "none" [] => .ok none
+    | .Constructor "some" fs => do
+        let v ← Codec.decodeField "val" fs
+        .ok (some v)
+    | e => .error s!"expected none/some constructor, got {repr e}"
+
+-- Field-level: absent → none, present → decoded value
+def Codec.decodeFieldOpt [Codec.Decode α] (name : String) (fs : List (Field Expression))
+    : Except String (Option α) :=
+  match lookupField name fs with
+  | .error _ => .ok none          -- missing field ↦ none
+  | .ok expr => Codec.Decode.decode expr |>.map some
+
+
 end Codec
 --------------------------------------------------------------------------------
+
+
+-- at call site for "optional fields"
+
+-- instance : Codec.Decode MyStruct where
+--   decode
+--     | .Constructor "MyStruct" fs => do
+--         let x ← Codec.decodeField    "requiredField" fs
+--         let y ← Codec.decodeFieldOpt "optionalField" fs
+--         .ok { x, y }
+--     | e => .error s!"expected MyStruct, got {repr e}"
