@@ -1,5 +1,5 @@
 --
--- Time-stamp: <2026-04-28 Tue 10:01 EDT - george@valhalla>
+-- Time-stamp: <2026-05-03 Sun 13:28 EDT - george@valhalla>
 --
 import MLML.Tokens
 import MLML.Expression
@@ -150,16 +150,16 @@ def parseRawExpression  (fuel : Nat) : Parser RawExpression := fun toks =>
         if isLower ident then                           
           Except.ok (RawExpression.Id ident, rest)
         
-        -- capitalized Token.ident → RawExpression.Constructor          
+        -- capitalized Token.ident → RawExpression.Record          
         else                                         
           match rest with
-          | [] => Except.ok (RawExpression.Constructor ident [], [])
+          | [] => Except.ok (RawExpression.Record ident [], [])
           | tok' :: rest' => 
             match tok' with
             | Token.lbrace => do
               let (fields,rest'') ← parseFields n [] rest'
-              pure (RawExpression.Constructor ident fields,rest'')
-            | _ => Except.ok (RawExpression.Constructor ident [], rest)
+              pure (RawExpression.Record ident fields,rest'')
+            | _ => Except.ok (RawExpression.Record ident [], rest)
       | _ => Except.error "mal-formed"
 
 end

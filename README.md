@@ -21,7 +21,7 @@ An `mlml` file contains a single `Expression`, which can be:
 - **Natural number literals**: `42`
 - **Boolean literals**: `true`, `false`
 - **Identifiers** (for let-bindings):  `classRoom`
-- **Constructors** (named records): `Semester { ay = 2025 term = Fall }`
+- **Record** (named records): `Semester { ay = 2025 term = Fall }`
     (possibly with no arguments): `Mon`, `Fall`, `AllDay`
 - **Lists**: `[ "item1" "item2" "item3" ]`
 
@@ -56,7 +56,7 @@ values into typed Lean values:
 ```lean
 instance : Codec.Decode MyType where
   decode
-    | .Constructor "MyType" fs => do
+    | .Record "MyType" fs => do
         let field1 ← Codec.decodeField "field1" fs
         let field2 ← Codec.decodeField "field2" fs
         pure { field1, field2 }

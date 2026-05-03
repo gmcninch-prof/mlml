@@ -56,14 +56,14 @@ Test {
 open Codec in
 instance : Codec.Decode Pet where
   decode
-    | .Constructor "Cat" [] => .ok Pet.Cat
-    | .Constructor "Dog" [] => .ok Pet.Dog
+    | .Record "Cat" [] => .ok Pet.Cat
+    | .Record "Dog" [] => .ok Pet.Dog
     | e => .error s!"Expected Pet, received {repr e}"
 
 open Codec in  
 instance : Codec.Decode MyData where
   decode
-    | .Constructor "MyData" fs => do
+    | .Record "MyData" fs => do
       let name     ← decodeField "name" fs
       let age      ← decodeField "age" fs
       let pet      ← decodeField "pet" fs

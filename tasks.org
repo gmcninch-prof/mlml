@@ -16,7 +16,7 @@ inductive RawExpression where
   | NatLit : Nat -> RawExpression
   | BoolLit : Bool -> RawExpression
   | Id : String -> RawExpression
-  | Constructor : String -> List RawField → RawExpression
+  | Record : String -> List RawField → RawExpression
   | Let : String -> RawExpression -> RawExpression  -- only here!
 
 inductive Expression where
@@ -25,7 +25,7 @@ inductive Expression where
   | NatLit : Nat -> Expression
   | BoolLit : Bool -> Expression
   | Id : String -> Expression          -- or maybe gone too?
-  | Constructor : String -> List Field → Expression
+  | Record : String -> List Field → Expression
 
 The parser produces RawExpression. Then a resolution pass walks the
 raw tree, maintaining an Environment (something like
@@ -138,7 +138,7 @@ the word import by itself is probably safe ...)
 For a config/data language like yours, `import "filename.mlml"` (no
 `#`) is probably fine — the word `import` at the start of a line is
 unambiguous since your other expression forms are either literals,
-`let x = ...`, or `Constructor { ... }` shapes. Nothing else starts
+`let x = ...`, or `Record { ... }` shapes. Nothing else starts
 with a bare keyword like that.
 
 The `#` sigil is useful in languages where keywords might collide with

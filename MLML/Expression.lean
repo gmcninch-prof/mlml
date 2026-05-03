@@ -1,5 +1,5 @@
 --
--- Time-stamp: <2026-04-28 Tue 10:13 EDT - george@valhalla>
+-- Time-stamp: <2026-05-03 Sun 13:27 EDT - george@valhalla>
 --
 
 --------------------------------------------------------------------------------
@@ -14,7 +14,7 @@ inductive RawExpression where
   | NatLit : Nat -> RawExpression
   | BoolLit : Bool -> RawExpression
   | Id : String -> RawExpression
-  | Constructor : String -> List (Field RawExpression) → RawExpression
+  | Record : String -> List (Field RawExpression) → RawExpression
 deriving Repr  
 
   inductive TopLevel where
@@ -26,7 +26,7 @@ inductive Expression where
   | StrLit : String -> Expression
   | NatLit : Nat -> Expression
   | BoolLit : Bool -> Expression
-  | Constructor : String -> List (Field Expression) → Expression
+  | Record : String -> List (Field Expression) → Expression
 deriving Repr
 
 --------------------------------------------------------------------------------
@@ -52,7 +52,7 @@ mutual
     | .StrLit s => "\"" ++ s ++ "\""
     | .NatLit n => toString n
     | .BoolLit b => toString b
-    | .Constructor id lst =>
+    | .Record id lst =>
         let fields := lst.attach.map (fun ⟨a, _⟩ => Field.render (n + 1) a)
         id ++ " {\n" ++ String.intercalate "\n" fields ++ "\n" ++ indent ++ "}"
 
@@ -92,9 +92,9 @@ def resolve : Environment → RawExpression → Except String Expression :=
     | .StrLit s          => pure <| .StrLit s
     | .NatLit n          => pure <| .NatLit n
     | .BoolLit b         => pure <| .BoolLit b
-    | .Constructor id rfs => do
+    | .Record id rfs => do
       let fs ← List.mapM (resolveField env) rfs
-      pure <| .Constructor id fs
+      pure <| .Record id fs
     | .Id ident => do
       let value ← lookupInEnvironment ident env
       pure value

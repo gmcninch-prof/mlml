@@ -1,5 +1,5 @@
 --
--- Time-stamp: <2026-05-01 Fri 10:19 EDT - george@sortilege>
+-- Time-stamp: <2026-05-03 Sun 13:28 EDT - george@valhalla>
 --
 
 import MLML.Expression
@@ -45,8 +45,8 @@ instance : Decode Bool where
 -- Expression-level Option decoder 
 instance [Codec.Decode α] : Codec.Decode (Option α) where
   decode
-    | .Constructor "none" [] => .ok none
-    | .Constructor "some" fs => do
+    | .Record "none" [] => .ok none
+    | .Record "some" fs => do
         let v ← Codec.decodeField "val" fs
         .ok (some v)
     | e => .error s!"expected none/some constructor, got {repr e}"
@@ -67,7 +67,7 @@ end Codec
 
 -- instance : Codec.Decode MyStruct where
 --   decode
---     | .Constructor "MyStruct" fs => do
+--     | .Record "MyStruct" fs => do
 --         let x ← Codec.decodeField    "requiredField" fs
 --         let y ← Codec.decodeFieldOpt "optionalField" fs
 --         .ok { x, y }
