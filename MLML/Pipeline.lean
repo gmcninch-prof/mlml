@@ -16,3 +16,12 @@ def parseAndDecode {α : Type} [Codec.Decode α]: String → Except String α :=
     Codec.Decode.decode expr
          
 
+
+def checkErrors (recordId : String) (R : (Type → Type) → Type) 
+    [Codec.DecodeRecord R] : String → List String :=
+  fun s => 
+    match  expressionFromString s with
+    | .ok e => Codec.decodeErrorRecord recordId R e
+    | .error err => [ err ]
+    
+
