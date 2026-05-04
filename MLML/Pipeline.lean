@@ -3,7 +3,7 @@ import MLML.Codec
 import MLML.Expression
 import MLML.Parse
 
-def expressionFromString : String → Except String Expression :=
+def expressionFromString : String → Except String (Expression .Resolved) :=
   fun s => do
     let toks := tokenize s
     let (ltl, _) ← parseTopLevelList toks

@@ -1,5 +1,5 @@
 --
--- Time-stamp: <2026-05-03 Sun 13:28 EDT - george@valhalla>
+-- Time-stamp: <2026-05-04 Mon 10:55 EDT - george@valhalla>
 --
 
 import MLML.Expression
@@ -9,7 +9,7 @@ open Expression
 namespace Codec
 
 class Decode (α : Type) where
-  decode : Expression → Except String α
+  decode : Expression .Resolved → Except String α
 
 instance : Alternative (Except String) where
   failure := Except.error "no alternative matched"
@@ -17,7 +17,7 @@ instance : Alternative (Except String) where
     | Except.ok x  => Except.ok x
     | Except.error _ => b ()
 
-def decodeField [Decode α] (name : String) (fs : List (Field Expression)) 
+def decodeField [Decode α] (name : String) (fs : List (Field .Resolved)) 
     : Except String α :=
   lookupField name fs >>= Decode.decode
 
@@ -52,7 +52,7 @@ instance [Codec.Decode α] : Codec.Decode (Option α) where
     | e => .error s!"expected none/some constructor, got {repr e}"
 
 -- Field-level: absent → none, present → decoded value
-def Codec.decodeFieldOpt [Codec.Decode α] (name : String) (fs : List (Field Expression))
+def Codec.decodeFieldOpt [Codec.Decode α] (name : String) (fs : List (Field .Resolved))
     : Except String (Option α) :=
   match lookupField name fs with
   | .error _ => .ok none          -- missing field ↦ none
