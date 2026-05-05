@@ -1,5 +1,5 @@
 --
--- Time-stamp: <2026-05-04 Mon 17:28 EDT - george@valhalla>
+-- Time-stamp: <2026-05-05 Tue 11:10 EDT - george@sortilege>
 --
 
 import MLML.Expression
@@ -56,6 +56,18 @@ def Codec.decodeFieldOpt [Codec.Decode α] (name : String) (fs : List (Field .Re
   match lookupField name fs with
   | .error _ => .ok none          -- missing field ↦ none
   | .ok expr => Codec.Decode.decode expr |>.map some
+
+def Codec.decodeFieldList [Decode α] (name : String) 
+    (fs : List (Field .Resolved)) : Except String (List α) :=
+  match lookupField name fs with
+  | .error _ => .ok []
+  | .ok expr => Decode.decode expr
+  
+def Codec.decodeFieldDefault [Decode α] (name : String) (default : α) 
+    (fs : List (Field .Resolved)) : Except String α :=
+  match lookupField name fs with
+  | .error _ => .ok default
+  | .ok expr => Decode.decode expr  
 
 -- Codec.lean additions
 
