@@ -1,6 +1,7 @@
 -- 
--- Time-stamp: <2026-04-30 Thu 13:25 EDT - george@valhalla>
+-- Time-stamp: <2026-05-11 Mon 17:36 EDT - george@valhalla>
 --
+module
 
 inductive Token
   | ident (s : String)   
